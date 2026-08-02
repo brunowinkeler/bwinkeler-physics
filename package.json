@@ -1,0 +1,62 @@
+{
+    "name": "bwinkeler-physics",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "Interactive physics simulations and theory running in the browser with C++, WebAssembly, and WebGL.",
+    "license": "MIT",
+    "engines": {
+        "node": ">=22.14.0"
+    },
+    "scripts": {
+        "dev": "astro dev",
+        "build": "astro build",
+        "preview": "astro preview --host 127.0.0.1 --port 4325",
+        "check": "astro check",
+        "lint": "eslint .",
+        "format": "prettier --check .",
+        "format:write": "prettier --write .",
+        "test": "vitest run",
+        "test:e2e": "playwright test",
+        "check:artifacts": "node scripts/check-artifacts.mjs",
+        "validate": "npm run format && npm run lint && npm run check && npm run test && npm run build && npm run check:artifacts",
+        "deploy": "wrangler pages deploy dist --project-name=bwinkeler-physics"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/brunowinkeler/bwinkeler-physics.git"
+    },
+    "keywords": [
+        "physics",
+        "webassembly",
+        "emscripten",
+        "raylib"
+    ],
+    "author": "Bruno Winkeler",
+    "bugs": {
+        "url": "https://github.com/brunowinkeler/bwinkeler-physics/issues"
+    },
+    "homepage": "https://physics.bwinkeler.com",
+    "dependencies": {
+        "@astrojs/check": "0.9.10",
+        "@astrojs/markdown-remark": "7.2.2",
+        "@astrojs/sitemap": "3.7.3",
+        "astro": "7.1.6",
+        "katex": "0.18.1",
+        "rehype-katex": "7.0.1",
+        "remark-math": "6.0.0",
+        "typescript": "6.0.3"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@playwright/test": "1.62.1",
+        "eslint": "10.8.0",
+        "eslint-plugin-astro": "1.7.0",
+        "globals": "17.9.0",
+        "prettier": "3.9.6",
+        "prettier-plugin-astro": "0.14.1",
+        "typescript-eslint": "8.65.0",
+        "vitest": "4.1.10",
+        "wrangler": "4.118.0"
+    }
+}

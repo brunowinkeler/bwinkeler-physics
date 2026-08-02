@@ -1,0 +1,81 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getEntry, render, type CollectionEntry } from "astro:content";
+import {
+  publishedSimulations,
+  simulationPath,
+  theoryPath,
+  type Simulation,
+} from "../../../data/simulations";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+
+export const getStaticPaths = (async () => {
+  const paths = [];
+
+  for (const simulation of publishedSimulations) {
+    const theory = await getEntry("theory", simulation.sourceDirectory);
+    if (!theory) {
+      throw new Error(
+        `Missing canonical theory for published simulation '${simulation.id}' at '${simulation.theoryFile}'.`,
+      );
+    }
+
+    paths.push({
+      params: { simulation: simulation.id },
+      props: { simulation, theory },
+    });
+  }
+
+  return paths;
+}) satisfies GetStaticPaths;
+
+interface Props {
+  simulation: Simulation;
+  theory: CollectionEntry<"theory">;
+}
+
+const { simulation, theory } = Astro.props;
+const { Content, headings } = await render(theory);
+const tableOfContents = headings.filter(
+  (heading) => heading.depth === 2 || heading.depth === 3,
+);
+---
+
+<BaseLayout
+  title={`${simulation.title} Theory`}
+  description={`Physical model, equations, numerical methods, validation targets, and limitations for ${simulation.title}.`}
+>
+  <div class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">Canonical theory · C++ source repository</p>
+      <h1>{simulation.title} theory</h1>
+      <p>
+        The equations and assumptions below are rendered directly from the
+        theory document pinned with the simulation source. There is no separate
+        web copy to drift out of date.
+      </p>
+      <nav class="page-tabs" aria-label={`${simulation.title} sections`}>
+        <a href={simulationPath(simulation)}>Simulation</a>
+        <a href={theoryPath(simulation)} aria-current="page">Theory</a>
+      </nav>
+    </header>
+
+    <div class="theory-layout">
+      <article class="prose">
+        <Content />
+      </article>
+      <nav class="theory-toc" aria-label="On this page">
+        <h2>On this page</h2>
+        <ol>
+          {
+            tableOfContents.map((heading) => (
+              <li style={`padding-left: ${(heading.depth - 2) * 0.75}rem`}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+    </div>
+  </div>
+</BaseLayout>

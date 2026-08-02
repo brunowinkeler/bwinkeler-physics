@@ -1,0 +1,21 @@
+{
+    "endOfLine": "lf",
+    "tabWidth": 4,
+    "proseWrap": "preserve",
+    "plugins": ["prettier-plugin-astro"],
+    "overrides": [
+        {
+            "files": "*.astro",
+            "options": {
+                "parser": "astro",
+                "tabWidth": 2
+            }
+        },
+        {
+            "files": "*.{yml,yaml}",
+            "options": {
+                "tabWidth": 2
+            }
+        }
+    ]
+}

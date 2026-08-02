@@ -1,0 +1,8 @@
+.astro/
+build/
+dist/
+node_modules/
+public/runtime/
+vendor/
+package-lock.json
+docs/PLATFORM_ARCHITECTURE.md

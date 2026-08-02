@@ -1,0 +1,93 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  getCategory,
+  publishedSimulations,
+  simulationPath,
+  theoryPath,
+  visibleSimulations,
+} from "../data/simulations";
+
+const featuredSimulation = publishedSimulations.find(
+  (simulation) => simulation.id === "pendulum",
+);
+if (!featuredSimulation) {
+  throw new Error("The published Pendulum Lab entry is missing.");
+}
+---
+
+<BaseLayout>
+  <div class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">C++ · WebAssembly · WebGL</p>
+      <h1>Physics you can explore, not just observe.</h1>
+      <p>
+        Run numerical experiments directly in your browser, inspect their
+        parameters in real time, and study the physical models behind each
+        simulation.
+      </p>
+      <div class="hero-actions">
+        <a
+          class="button button--primary"
+          href={simulationPath(featuredSimulation)}>Open Pendulum Lab</a
+        >
+        <a
+          class="button"
+          href="https://github.com/brunowinkeler/cpp-physics-simulation"
+          target="_blank"
+          rel="noopener noreferrer">View C++ source</a
+        >
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Laboratories</p>
+        <h2>Simulation catalog</h2>
+      </div>
+      <p>{visibleSimulations.length} experiments and planned labs</p>
+    </div>
+
+    <section class="simulation-grid" aria-label="Simulation catalog">
+      {
+        visibleSimulations.map((simulation) => {
+          const category = getCategory(simulation.category);
+          const published = simulation.status === "published";
+
+          return (
+            <article
+              class:list={["simulation-card", { "is-published": published }]}
+            >
+              <div>
+                <div class="simulation-card__meta">
+                  <span>{category?.title}</span>
+                  <span class:list={["status-pill", { "is-live": published }]}>
+                    {published ? "Available" : "Coming soon"}
+                  </span>
+                </div>
+                <h3>{simulation.title}</h3>
+                <p>{simulation.description}</p>
+              </div>
+              <div class="simulation-card__links">
+                {published ? (
+                  <>
+                    <a href={simulationPath(simulation)}>Run simulation →</a>
+                    <a href={theoryPath(simulation)}>Read theory</a>
+                  </>
+                ) : (
+                  <span class="eyebrow">Planned</span>
+                )}
+              </div>
+            </article>
+          );
+        })
+      }
+    </section>
+
+    <div class="notice">
+      <strong>Runs on your device.</strong> The physics calculation and rendering
+      execute locally in WebAssembly and WebGL. Cloudflare serves static files; no
+      simulation workload is sent to the platform VPS.
+    </div>
+  </div>
+</BaseLayout>

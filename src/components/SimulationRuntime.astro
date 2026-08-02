@@ -1,0 +1,193 @@
+---
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+import type { SimulationDefinition } from "../data/simulations";
+
+interface Props {
+  simulation: SimulationDefinition;
+}
+
+const { simulation } = Astro.props;
+const runtimeScript = simulation.runtimeScript;
+const runtimeAvailable = Boolean(
+  runtimeScript &&
+  existsSync(
+    resolve(process.cwd(), "public", runtimeScript.replace(/^\//, "")),
+  ),
+);
+---
+
+<section class="lab-frame" aria-labelledby="runtime-heading">
+  {
+    runtimeAvailable && runtimeScript ? (
+      <div
+        class="simulation-runtime"
+        data-simulation-runtime
+        data-runtime-script={runtimeScript}
+        data-minimum-width={simulation.minimumViewport.width}
+        data-minimum-height={simulation.minimumViewport.height}
+      >
+        <h2 id="runtime-heading" class="visually-hidden">
+          Interactive simulation
+        </h2>
+        <div
+          class="simulation-runtime__status"
+          data-runtime-status
+          role="status"
+        >
+          <span class="simulation-runtime__spinner" aria-hidden="true" />
+          <span data-runtime-status-text>Preparing WebAssembly runtime…</span>
+        </div>
+        <canvas
+          id="canvas"
+          class="simulation-runtime__canvas"
+          width="1280"
+          height="720"
+          tabindex="0"
+          aria-label={`${simulation.title} interactive simulation canvas`}
+        >
+          Your browser does not support the canvas required by this simulation.
+        </canvas>
+        <noscript>
+          <p class="notice">
+            JavaScript and WebAssembly are required to run the interactive
+            simulation. The theory page remains available without them.
+          </p>
+        </noscript>
+      </div>
+    ) : (
+      <div class="lab-placeholder">
+        <div class="lab-placeholder__content">
+          <span class="lab-placeholder__icon" aria-hidden="true">
+            θ
+          </span>
+          <h2 id="runtime-heading">WebAssembly runtime is not built yet</h2>
+          <p>
+            The site and theory can run without generated binaries. Build the
+            pinned C++ sources with the Emscripten workflow to place this lab's
+            JavaScript and WebAssembly artifacts here.
+          </p>
+        </div>
+      </div>
+    )
+  }
+</section>
+
+<script>
+  interface EmscriptenModuleConfig {
+    canvas: HTMLCanvasElement;
+    setStatus: (message: string) => void;
+    monitorRunDependencies: (remaining: number) => void;
+    onRuntimeInitialized: () => void;
+    onAbort: (reason: unknown) => void;
+    printErr: (message: unknown) => void;
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-simulation-runtime]");
+  const canvas = root?.querySelector<HTMLCanvasElement>("#canvas");
+  const status = root?.querySelector<HTMLElement>("[data-runtime-status]");
+  const statusText = root?.querySelector<HTMLElement>(
+    "[data-runtime-status-text]",
+  );
+  const runtimeScript = root?.dataset.runtimeScript;
+
+  if (root && canvas && status && statusText && runtimeScript) {
+    const runtimeRoot = root;
+    const runtimeCanvas = canvas;
+    const runtimeStatus = status;
+    const runtimeStatusText = statusText;
+    const runtimeScriptUrl = runtimeScript;
+    const minimumWidth = Number(runtimeRoot.dataset.minimumWidth);
+    const minimumHeight = Number(runtimeRoot.dataset.minimumHeight);
+    let runtimeStarted = false;
+
+    function showError(message: string) {
+      runtimeStatus.hidden = false;
+      runtimeStatus.classList.add("is-error");
+      runtimeStatusText.textContent = message;
+    }
+
+    function startRuntime() {
+      if (runtimeStarted) return;
+      runtimeStarted = true;
+      window.removeEventListener("resize", handleViewportChange);
+
+      runtimeStatus.classList.remove("is-error");
+      runtimeStatusText.textContent = "Preparing WebAssembly runtime…";
+
+      if (typeof WebAssembly !== "object") {
+        showError("This browser does not provide WebAssembly support.");
+        return;
+      }
+
+      if (!document.createElement("canvas").getContext("webgl")) {
+        showError(
+          "WebGL is unavailable. Check browser graphics settings or use another device.",
+        );
+        return;
+      }
+
+      const moduleConfig: EmscriptenModuleConfig = {
+        canvas: runtimeCanvas,
+        setStatus(message) {
+          if (message) runtimeStatusText.textContent = message;
+        },
+        monitorRunDependencies(remaining) {
+          runtimeStatusText.textContent = remaining
+            ? `Loading simulation resources (${remaining} remaining)…`
+            : "Starting simulation…";
+        },
+        onRuntimeInitialized() {
+          runtimeStatus.hidden = true;
+          runtimeCanvas.focus({ preventScroll: true });
+        },
+        onAbort(reason) {
+          showError(`The simulation stopped: ${String(reason)}`);
+        },
+        printErr(message) {
+          console.error(message);
+        },
+      };
+
+      (window as Window & { Module?: EmscriptenModuleConfig }).Module =
+        moduleConfig;
+
+      runtimeCanvas.addEventListener("contextmenu", (event) =>
+        event.preventDefault(),
+      );
+
+      window.addEventListener("error", (event) => {
+        if (!String(event.filename).includes("/runtime/")) return;
+        showError(
+          "The simulation runtime could not be loaded. Please reload or try again later.",
+        );
+      });
+
+      const loader = document.createElement("script");
+      loader.src = runtimeScriptUrl;
+      loader.async = true;
+      loader.addEventListener("error", () => {
+        showError("The simulation runtime could not be downloaded.");
+      });
+      document.head.append(loader);
+    }
+
+    function handleViewportChange() {
+      if (
+        window.innerWidth >= minimumWidth &&
+        window.innerHeight >= minimumHeight
+      ) {
+        startRuntime();
+        return;
+      }
+
+      showError(
+        `This interactive lab requires a viewport of at least ${minimumWidth} × ${minimumHeight} pixels. Use a larger display or read the theory instead.`,
+      );
+    }
+
+    window.addEventListener("resize", handleViewportChange);
+    handleViewportChange();
+  }
+</script>

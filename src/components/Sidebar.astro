@@ -1,0 +1,218 @@
+---
+import {
+  simulationCategories,
+  simulationPath,
+  visibleSimulations,
+} from "../data/simulations";
+
+interface Props {
+  pathname: string;
+}
+
+const { pathname } = Astro.props;
+---
+
+<aside class="sidebar" id="simulation-navigation" data-sidebar>
+  <div class="sidebar__header">
+    <a class="sidebar__brand" href="/" aria-label="Physics Lab home">
+      <span class="sidebar__mark" aria-hidden="true">φ</span>
+      <span class="sidebar__brand-copy">
+        <strong>Physics Lab</strong>
+        <span>Interactive C++ experiments</span>
+      </span>
+    </a>
+    <button
+      class="sidebar__collapse"
+      type="button"
+      data-sidebar-toggle
+      aria-controls="simulation-navigation"
+      aria-expanded="true"
+      aria-label="Collapse simulation navigation"
+    >
+      <span aria-hidden="true">‹</span>
+    </button>
+  </div>
+
+  <div class="sidebar__content" data-sidebar-content>
+    <label class="sidebar__search">
+      <span class="visually-hidden">Filter simulations</span>
+      <span aria-hidden="true">⌕</span>
+      <input
+        type="search"
+        placeholder="Filter simulations"
+        autocomplete="off"
+        data-simulation-filter
+      />
+    </label>
+
+    <nav aria-label="Physics simulations">
+      {
+        simulationCategories.map((category) => {
+          const categorySimulations = visibleSimulations.filter(
+            (simulation) => simulation.category === category.id,
+          );
+
+          return (
+            <section
+              class="sidebar__category"
+              data-simulation-category
+              aria-labelledby={`category-${category.id}`}
+            >
+              <h2 id={`category-${category.id}`}>{category.title}</h2>
+              <ul>
+                {categorySimulations.map((simulation) => {
+                  const href = simulationPath(simulation);
+                  const active = pathname.startsWith(href);
+                  const published = simulation.status === "published";
+
+                  return (
+                    <li
+                      data-simulation-item
+                      data-search-text={`${simulation.title} ${simulation.description}`.toLowerCase()}
+                    >
+                      {published ? (
+                        <a
+                          class:list={[
+                            "sidebar__link",
+                            { "is-active": active },
+                          ]}
+                          href={href}
+                          aria-current={active ? "page" : undefined}
+                          title={simulation.title}
+                        >
+                          <span class="sidebar__link-mark" aria-hidden="true" />
+                          <span class="sidebar__link-copy">
+                            <strong>{simulation.shortTitle}</strong>
+                            <span>{simulation.engine}</span>
+                          </span>
+                        </a>
+                      ) : (
+                        <span
+                          class="sidebar__link sidebar__link--disabled"
+                          title={`${simulation.title} — coming soon`}
+                        >
+                          <span class="sidebar__link-mark" aria-hidden="true" />
+                          <span class="sidebar__link-copy">
+                            <strong>{simulation.shortTitle}</strong>
+                            <span>Coming soon</span>
+                          </span>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })
+      }
+    </nav>
+    <p class="sidebar__empty" data-filter-empty hidden>
+      No simulations match this filter.
+    </p>
+  </div>
+
+  <div class="sidebar__footer">
+    <a
+      href="https://github.com/brunowinkeler/bwinkeler-physics"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="View Physics Lab source on GitHub"
+    >
+      <span aria-hidden="true">⌘</span>
+      <span class="sidebar__footer-copy">View source</span>
+    </a>
+  </div>
+</aside>
+
+<button
+  class="sidebar-backdrop"
+  type="button"
+  data-sidebar-backdrop
+  aria-label="Close simulation navigation"
+  hidden></button>
+
+<script>
+  const storageKey = "physics-lab-sidebar-collapsed";
+  const sidebar = document.querySelector<HTMLElement>("[data-sidebar]");
+  const toggle = document.querySelector<HTMLButtonElement>(
+    "[data-sidebar-toggle]",
+  );
+  const backdrop = document.querySelector<HTMLButtonElement>(
+    "[data-sidebar-backdrop]",
+  );
+  const filter = document.querySelector<HTMLInputElement>(
+    "[data-simulation-filter]",
+  );
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-simulation-item]"),
+  );
+  const categories = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-simulation-category]"),
+  );
+  const emptyState = document.querySelector<HTMLElement>("[data-filter-empty]");
+  const narrowViewport = window.matchMedia("(max-width: 800px)");
+
+  function setCollapsed(collapsed: boolean, persist = true) {
+    if (!sidebar || !toggle) return;
+
+    sidebar.classList.toggle("is-collapsed", collapsed);
+    document.documentElement.classList.toggle("sidebar-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute(
+      "aria-label",
+      collapsed
+        ? "Expand simulation navigation"
+        : "Collapse simulation navigation",
+    );
+    const icon = toggle.querySelector("span");
+    if (icon) icon.textContent = collapsed ? "›" : "‹";
+
+    if (narrowViewport.matches && backdrop) {
+      backdrop.hidden = collapsed;
+    }
+
+    if (persist && !narrowViewport.matches) {
+      localStorage.setItem(storageKey, String(collapsed));
+    }
+  }
+
+  const stored = localStorage.getItem(storageKey) === "true";
+  setCollapsed(narrowViewport.matches || stored, false);
+
+  toggle?.addEventListener("click", () => {
+    setCollapsed(!sidebar?.classList.contains("is-collapsed"));
+  });
+
+  backdrop?.addEventListener("click", () => setCollapsed(true, false));
+
+  narrowViewport.addEventListener("change", ({ matches }) => {
+    setCollapsed(matches || localStorage.getItem(storageKey) === "true", false);
+  });
+
+  filter?.addEventListener("input", () => {
+    const query = filter.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    for (const item of items) {
+      const matches = !query || item.dataset.searchText?.includes(query);
+      item.hidden = !matches;
+      if (matches) visibleCount += 1;
+    }
+
+    for (const category of categories) {
+      category.hidden = !category.querySelector(
+        "[data-simulation-item]:not([hidden])",
+      );
+    }
+
+    if (emptyState) emptyState.hidden = visibleCount !== 0;
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && narrowViewport.matches) {
+      setCollapsed(true, false);
+      toggle?.focus();
+    }
+  });
+</script>

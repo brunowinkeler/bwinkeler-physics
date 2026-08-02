@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  EMSCRIPTEN_VERSION: 6.0.5
+
+jobs:
+  source-provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repositories
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: Verify pinned source revision is public
+        run: |
+          source_sha="$(git ls-tree HEAD vendor/cpp-physics-simulation | awk '{print $3}')"
+          git init --bare source-provenance.git
+          git -C source-provenance.git fetch --depth=1 \
+            https://github.com/brunowinkeler/cpp-physics-simulation.git \
+            "$source_sha"
+
+  native:
+    needs: source-provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repositories
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install native graphics build dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          ninja-build libasound2-dev libx11-dev libxrandr-dev libxi-dev
+          libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+
+      - name: Configure native tests
+        working-directory: vendor/cpp-physics-simulation
+        run: cmake --preset linux-debug
+
+      - name: Build native tests
+        working-directory: vendor/cpp-physics-simulation
+        run: cmake --build --preset linux-debug --parallel
+
+      - name: Run native tests
+        working-directory: vendor/cpp-physics-simulation
+        run: env -u DISPLAY -u WAYLAND_DISPLAY ctest --test-dir build/linux-debug --output-on-failure
+
+  web:
+    needs: source-provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repositories
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.14.0
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Set up Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+          actions-cache-folder: emsdk-cache
+
+      - name: Configure WebAssembly runtime
+        run: >-
+          emcmake cmake --fresh -S . -B build/emscripten
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build WebAssembly runtime
+        run: >-
+          cmake --build build/emscripten
+          --target physics_lab_pendulum --parallel
+
+      - name: Validate static site
+        run: npm run validate
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser smoke tests
+        run: npm run test:e2e
+
+      - name: Check runtime asset limits
+        shell: bash
+        run: |
+          find public/runtime -type f -size +25M -print -quit | grep -q . && {
+            echo "A runtime asset exceeds the Cloudflare Pages 25 MiB limit." >&2
+            exit 1
+          }
+          test -s public/runtime/pendulum/pendulum.js
+          test -s public/runtime/pendulum/pendulum.wasm
+
+      - name: Upload deployable site
+        uses: actions/upload-artifact@v6
+        with:
+          name: physics-lab-site
+          path: dist
+          if-no-files-found: error
+          retention-days: 14

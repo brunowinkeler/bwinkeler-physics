@@ -1,0 +1,22 @@
+# Dependencies and generated output
+node_modules/
+.astro/
+dist/
+build/
+coverage/
+
+# Generated WebAssembly runtime files
+public/runtime/
+
+# Environment and local tooling
+.env
+.env.*
+!.env.example
+.wrangler/
+test-results/
+playwright-report/
+
+# Editors and operating systems
+.vscode/settings.json
+.DS_Store
+Thumbs.db

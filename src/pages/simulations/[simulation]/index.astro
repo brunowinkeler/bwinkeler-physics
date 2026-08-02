@@ -1,0 +1,47 @@
+---
+import type { GetStaticPaths } from "astro";
+import SimulationRuntime from "../../../components/SimulationRuntime.astro";
+import {
+  publishedSimulations,
+  simulationPath,
+  theoryPath,
+  type Simulation,
+} from "../../../data/simulations";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+
+export const getStaticPaths = (() =>
+  publishedSimulations.map((simulation) => ({
+    params: { simulation: simulation.id },
+    props: { simulation },
+  }))) satisfies GetStaticPaths;
+
+interface Props {
+  simulation: Simulation;
+}
+
+const { simulation } = Astro.props;
+---
+
+<BaseLayout title={simulation.title} description={simulation.description}>
+  <div class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">Interactive laboratory · {simulation.engine}</p>
+      <h1>{simulation.title}</h1>
+      <p>{simulation.description}</p>
+      <nav class="page-tabs" aria-label={`${simulation.title} sections`}>
+        <a href={simulationPath(simulation)} aria-current="page">Simulation</a>
+        <a href={theoryPath(simulation)}>Theory</a>
+      </nav>
+    </header>
+
+    <SimulationRuntime simulation={simulation} />
+
+    <div class="notice">
+      <strong>Desktop-first v1:</strong> the interactive canvas targets viewports
+      of at least {simulation.minimumViewport.width} × {
+        simulation.minimumViewport.height
+      } pixels with keyboard and mouse input. Smaller screens will receive a guided
+      fallback rather than an unusable canvas.
+    </div>
+  </div>
+</BaseLayout>

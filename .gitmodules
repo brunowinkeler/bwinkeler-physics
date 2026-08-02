@@ -1,0 +1,3 @@
+[submodule "vendor/cpp-physics-simulation"]
+	path = vendor/cpp-physics-simulation
+	url = https://github.com/brunowinkeler/cpp-physics-simulation.git
