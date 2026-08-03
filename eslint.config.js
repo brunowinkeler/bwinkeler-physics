@@ -9,6 +9,7 @@ export default [
             ".astro/**",
             "build/**",
             "dist/**",
+            "emsdk-cache/**",
             "node_modules/**",
             "public/runtime/**",
             "vendor/**",

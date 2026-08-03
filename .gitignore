@@ -4,6 +4,7 @@ node_modules/
 dist/
 build/
 coverage/
+emsdk-cache/
 
 # Generated WebAssembly runtime files
 public/runtime/
