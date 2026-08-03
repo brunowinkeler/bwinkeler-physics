@@ -1,15 +1,17 @@
 # Performance baseline
 
-## Initial Pendulum WebAssembly build
+## Current Pendulum WebAssembly build
 
-- Date: 2026-08-02
+- Date: 2026-08-03
 - Emscripten: 6.0.5
 - raylib: 5.5
 - Dear ImGui: 1.92.6
 - Build mode: release, `-O3`, LTO, single-threaded, memory growth enabled
-- JavaScript glue: 169,110 bytes uncompressed
-- WebAssembly module: 518,189 bytes uncompressed
-- Complete static output: 71 files and 1,938,814 bytes uncompressed
+- JavaScript glue: 169,552 bytes uncompressed
+- WebAssembly module: 520,645 bytes uncompressed
+- Complete static output: 71 files and 1,944,392 bytes uncompressed
+- Canvas sizing: one drawing coordinate per CSS pixel
+- Dear ImGui font size: 18 pixels
 - Initial heap: 64 MiB
 - Maximum heap: 256 MiB
 

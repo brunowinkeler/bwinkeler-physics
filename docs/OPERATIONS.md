@@ -23,8 +23,10 @@ After any browser-adapter, source-selection, compiler, or C++ revision change:
 2. confirm generated `.js` and `.wasm` files remain under 25 MiB each;
 3. open the Pendulum route in supported browsers;
 4. exercise start, pause, reset, simple/double mode, camera, controls, and plots;
-5. inspect the browser console for errors and WebGL warnings;
-6. verify the theory route does not request runtime files.
+5. verify the pointer and Dear ImGui controls remain aligned at multiple viewport sizes;
+6. enter and exit full screen, including with the `Escape` key;
+7. inspect the browser console for errors and WebGL warnings;
+8. verify the theory route does not request runtime files.
 
 ## Source update
 

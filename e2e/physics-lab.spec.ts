@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+interface PhysicsLabModule {
+    _physicsLabPendulumSimulationTime?: () => number;
+    _physicsLabPendulumMouseX?: () => number;
+    _physicsLabPendulumMouseY?: () => number;
+}
+
+type PhysicsLabWindow = Window & { Module?: PhysicsLabModule };
+
 test("catalog navigation is data-driven and collapsible", async ({ page }) => {
     await page.goto("/");
 
@@ -81,28 +89,99 @@ test("the real C++ pendulum runtime initializes and advances", async ({
         .poll(() =>
             page.evaluate(
                 () =>
-                    typeof (
-                        window as Window & {
-                            Module?: {
-                                _physicsLabPendulumSimulationTime?: () => number;
-                            };
-                        }
-                    ).Module?._physicsLabPendulumSimulationTime,
+                    typeof (window as PhysicsLabWindow).Module
+                        ?._physicsLabPendulumSimulationTime,
             ),
         )
         .toBe("function");
 
+    await expect
+        .poll(() =>
+            page.evaluate(
+                () =>
+                    typeof (window as PhysicsLabWindow).Module
+                        ?._physicsLabPendulumMouseX,
+            ),
+        )
+        .toBe("function");
+
+    const canvasDimensions = await canvas.evaluate((element) => {
+        const canvasElement = element as HTMLCanvasElement;
+        return {
+            drawingWidth: canvasElement.width,
+            drawingHeight: canvasElement.height,
+            cssWidth: canvasElement.clientWidth,
+            cssHeight: canvasElement.clientHeight,
+        };
+    });
+    expect(
+        Math.abs(canvasDimensions.drawingWidth - canvasDimensions.cssWidth),
+    ).toBeLessThanOrEqual(1);
+    expect(
+        Math.abs(canvasDimensions.drawingHeight - canvasDimensions.cssHeight),
+    ).toBeLessThanOrEqual(1);
+
+    const canvasBox = await canvas.boundingBox();
+    expect(canvasBox).not.toBeNull();
+    if (!canvasBox) throw new Error("The simulation canvas has no layout box.");
+
+    const expectedMouse = {
+        x: canvasBox.width * 0.72,
+        y: canvasBox.height * 0.48,
+    };
+    await page.mouse.move(
+        canvasBox.x + expectedMouse.x,
+        canvasBox.y + expectedMouse.y,
+    );
+
+    await expect
+        .poll(() =>
+            page.evaluate(
+                ({ expectedX, expectedY }) => {
+                    const module = (window as PhysicsLabWindow).Module;
+                    const actualX = module?._physicsLabPendulumMouseX?.() ?? -1;
+                    const actualY = module?._physicsLabPendulumMouseY?.() ?? -1;
+                    return Math.max(
+                        Math.abs(actualX - expectedX),
+                        Math.abs(actualY - expectedY),
+                    );
+                },
+                { expectedX: expectedMouse.x, expectedY: expectedMouse.y },
+            ),
+        )
+        .toBeLessThanOrEqual(2);
+
+    const enterFullscreen = page.getByRole("button", {
+        name: "Enter full screen",
+    });
+    await expect(enterFullscreen).toBeVisible();
+    await enterFullscreen.click();
+    const exitFullscreen = page.getByRole("button", {
+        name: "Exit full screen",
+    });
+    await expect(exitFullscreen).toBeVisible();
+    await expect
+        .poll(() =>
+            canvas.evaluate((element) => {
+                const canvasElement = element as HTMLCanvasElement;
+                return Math.max(
+                    Math.abs(canvasElement.width - canvasElement.clientWidth),
+                    Math.abs(canvasElement.height - canvasElement.clientHeight),
+                );
+            }),
+        )
+        .toBeLessThanOrEqual(1);
+    await exitFullscreen.click();
+    await expect(enterFullscreen).toBeVisible();
+
     const initialTime = await page.evaluate(
         () =>
             (
-                window as Window & {
-                    Module?: {
-                        _physicsLabPendulumSimulationTime?: () => number;
-                    };
-                }
+                window as PhysicsLabWindow
             ).Module?._physicsLabPendulumSimulationTime?.() ?? 0,
     );
 
+    await canvas.focus();
     await page.keyboard.down("Space");
 
     try {
@@ -112,11 +191,7 @@ test("the real C++ pendulum runtime initializes and advances", async ({
                     page.evaluate(
                         () =>
                             (
-                                window as Window & {
-                                    Module?: {
-                                        _physicsLabPendulumSimulationTime?: () => number;
-                                    };
-                                }
+                                window as PhysicsLabWindow
                             ).Module?._physicsLabPendulumSimulationTime?.() ??
                             0,
                     ),

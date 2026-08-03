@@ -79,6 +79,13 @@ sequenceDiagram
 The adapter uses a returning Emscripten main-loop callback. It does not retain
 the native blocking `while` loop and does not use Asyncify.
 
+The web adapter keeps the Raylib drawing buffer equal to the canvas's CSS size.
+This one-to-one coordinate system prevents browser scaling from shrinking the
+Dear ImGui interface or displacing mouse input. The browser-only ImGui setup
+uses an 18-pixel default font and proportionally larger controls. Entering or
+leaving the Fullscreen API changes the canvas layout; the adapter detects the
+new CSS dimensions and resizes Raylib on the following animation frame.
+
 ## Repository boundary
 
 ### Native source repository owns

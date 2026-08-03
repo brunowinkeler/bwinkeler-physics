@@ -31,30 +31,48 @@ const runtimeAvailable = Boolean(
         <h2 id="runtime-heading" class="visually-hidden">
           Interactive simulation
         </h2>
-        <div
-          class="simulation-runtime__status"
-          data-runtime-status
-          role="status"
-        >
-          <span class="simulation-runtime__spinner" aria-hidden="true" />
-          <span data-runtime-status-text>Preparing WebAssembly runtime…</span>
+        <div class="simulation-runtime__toolbar">
+          <p>Space: start/pause · R: reset · 1/2: change model</p>
+          <button
+            class="simulation-runtime__fullscreen"
+            type="button"
+            data-fullscreen-toggle
+            aria-label="Enter full screen"
+            hidden
+          >
+            <span data-fullscreen-icon aria-hidden="true">
+              ⛶
+            </span>
+            <span data-fullscreen-label>Full screen</span>
+          </button>
         </div>
-        <canvas
-          id="canvas"
-          class="simulation-runtime__canvas"
-          width="1280"
-          height="720"
-          tabindex="0"
-          aria-label={`${simulation.title} interactive simulation canvas`}
-        >
-          Your browser does not support the canvas required by this simulation.
-        </canvas>
-        <noscript>
-          <p class="notice">
-            JavaScript and WebAssembly are required to run the interactive
-            simulation. The theory page remains available without them.
-          </p>
-        </noscript>
+        <div class="simulation-runtime__viewport">
+          <div
+            class="simulation-runtime__status"
+            data-runtime-status
+            role="status"
+          >
+            <span class="simulation-runtime__spinner" aria-hidden="true" />
+            <span data-runtime-status-text>Preparing WebAssembly runtime…</span>
+          </div>
+          <canvas
+            id="canvas"
+            class="simulation-runtime__canvas"
+            width="1280"
+            height="720"
+            tabindex="0"
+            aria-label={`${simulation.title} interactive simulation canvas`}
+          >
+            Your browser does not support the canvas required by this
+            simulation.
+          </canvas>
+          <noscript>
+            <p class="notice">
+              JavaScript and WebAssembly are required to run the interactive
+              simulation. The theory page remains available without them.
+            </p>
+          </noscript>
+        </div>
       </div>
     ) : (
       <div class="lab-placeholder">
@@ -82,6 +100,7 @@ const runtimeAvailable = Boolean(
     onRuntimeInitialized: () => void;
     onAbort: (reason: unknown) => void;
     printErr: (message: unknown) => void;
+    _physicsLabResizePendulumCanvas?: (width: number, height: number) => void;
   }
 
   const root = document.querySelector<HTMLElement>("[data-simulation-runtime]");
@@ -90,17 +109,84 @@ const runtimeAvailable = Boolean(
   const statusText = root?.querySelector<HTMLElement>(
     "[data-runtime-status-text]",
   );
+  const fullscreenButton = root?.querySelector<HTMLButtonElement>(
+    "[data-fullscreen-toggle]",
+  );
+  const fullscreenIcon = root?.querySelector<HTMLElement>(
+    "[data-fullscreen-icon]",
+  );
+  const fullscreenLabel = root?.querySelector<HTMLElement>(
+    "[data-fullscreen-label]",
+  );
   const runtimeScript = root?.dataset.runtimeScript;
 
-  if (root && canvas && status && statusText && runtimeScript) {
+  if (
+    root &&
+    canvas &&
+    status &&
+    statusText &&
+    fullscreenButton &&
+    fullscreenIcon &&
+    fullscreenLabel &&
+    runtimeScript
+  ) {
     const runtimeRoot = root;
     const runtimeCanvas = canvas;
     const runtimeStatus = status;
     const runtimeStatusText = statusText;
+    const runtimeFullscreenButton = fullscreenButton;
+    const runtimeFullscreenIcon = fullscreenIcon;
+    const runtimeFullscreenLabel = fullscreenLabel;
     const runtimeScriptUrl = runtimeScript;
     const minimumWidth = Number(runtimeRoot.dataset.minimumWidth);
     const minimumHeight = Number(runtimeRoot.dataset.minimumHeight);
     let runtimeStarted = false;
+    let canvasResizeObserver: ResizeObserver | undefined;
+
+    function synchronizeCanvasSize() {
+      const module = (window as Window & { Module?: EmscriptenModuleConfig })
+        .Module;
+      module?._physicsLabResizePendulumCanvas?.(
+        Math.max(1, Math.round(runtimeCanvas.clientWidth)),
+        Math.max(1, Math.round(runtimeCanvas.clientHeight)),
+      );
+    }
+
+    function handleFullscreenChange() {
+      const fullscreen = document.fullscreenElement === runtimeRoot;
+      runtimeRoot.classList.toggle("is-fullscreen", fullscreen);
+      runtimeFullscreenButton.setAttribute(
+        "aria-label",
+        fullscreen ? "Exit full screen" : "Enter full screen",
+      );
+      runtimeFullscreenIcon.textContent = fullscreen ? "×" : "⛶";
+      runtimeFullscreenLabel.textContent = fullscreen
+        ? "Exit full screen"
+        : "Full screen";
+
+      if (runtimeStarted) {
+        requestAnimationFrame(() => {
+          synchronizeCanvasSize();
+          runtimeCanvas.focus({ preventScroll: true });
+        });
+      } else {
+        handleViewportChange();
+      }
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (document.fullscreenElement === runtimeRoot) {
+          await document.exitFullscreen();
+        } else {
+          await runtimeRoot.requestFullscreen();
+        }
+      } catch (error) {
+        console.error("Full screen could not be opened.", error);
+        runtimeFullscreenButton.disabled = true;
+        runtimeFullscreenButton.title = "Full screen is unavailable";
+      }
+    }
 
     function showError(message: string) {
       runtimeStatus.hidden = false;
@@ -139,6 +225,9 @@ const runtimeAvailable = Boolean(
             : "Starting simulation…";
         },
         onRuntimeInitialized() {
+          synchronizeCanvasSize();
+          canvasResizeObserver = new ResizeObserver(synchronizeCanvasSize);
+          canvasResizeObserver.observe(runtimeCanvas);
           runtimeStatus.hidden = true;
           runtimeCanvas.focus({ preventScroll: true });
         },
@@ -188,6 +277,14 @@ const runtimeAvailable = Boolean(
     }
 
     window.addEventListener("resize", handleViewportChange);
+    window.addEventListener(
+      "pagehide",
+      () => canvasResizeObserver?.disconnect(),
+      { once: true },
+    );
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    runtimeFullscreenButton.addEventListener("click", toggleFullscreen);
+    runtimeFullscreenButton.hidden = !document.fullscreenEnabled;
     handleViewportChange();
   }
 </script>

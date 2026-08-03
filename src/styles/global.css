@@ -334,6 +334,10 @@ a:hover {
     padding-block: clamp(2rem, 5vw, 5rem);
 }
 
+.page-shell--simulation {
+    width: min(100% - 1.5rem, 100rem);
+}
+
 .eyebrow {
     margin: 0 0 0.75rem;
     color: var(--accent);
@@ -487,18 +491,87 @@ a:hover {
 
 .simulation-runtime {
     position: relative;
+    background: #0e1018;
+}
+
+.simulation-runtime__toolbar {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0.75rem 0.55rem 1rem;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.simulation-runtime__toolbar p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.simulation-runtime__fullscreen {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem;
+    color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.simulation-runtime__fullscreen:hover {
+    color: #11131c;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.simulation-runtime__fullscreen[hidden] {
+    display: none;
+}
+
+.simulation-runtime__fullscreen:disabled {
+    color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.simulation-runtime__viewport {
+    position: relative;
     display: grid;
-    min-height: clamp(28rem, 68vh, 52rem);
-    place-items: center;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    place-items: stretch;
+    overflow: hidden;
 }
 
 .simulation-runtime__canvas {
     display: block;
     width: 100%;
-    height: auto;
-    max-height: calc(100vh - 4rem);
+    height: 100%;
     background: #1e1e2e;
-    object-fit: contain;
+}
+
+.simulation-runtime:fullscreen,
+.simulation-runtime.is-fullscreen {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    flex-direction: column;
+    background: #0e1018;
+}
+
+.simulation-runtime:fullscreen .simulation-runtime__viewport,
+.simulation-runtime.is-fullscreen .simulation-runtime__viewport {
+    min-height: 0;
+    flex: 1;
+    aspect-ratio: auto;
 }
 
 .simulation-runtime__status {
