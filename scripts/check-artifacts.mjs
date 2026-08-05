@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const outputRoot = resolve("dist");
@@ -36,6 +36,21 @@ for (const path of files) {
     if (size > maximumFileSize) {
         throw new Error(
             `${relative(outputRoot, path)} is ${size} bytes, exceeding the Cloudflare Pages 25 MiB per-file limit.`,
+        );
+    }
+}
+
+// The build inlines small font files as data URIs, so the deployed policy has to
+// allow every scheme the generated stylesheets actually reference.
+const headers = await readFile(resolve(outputRoot, "_headers"), "utf8");
+const fontSource = headers.match(/font-src ([^;]+);/)?.[1] ?? "";
+const stylesheets = files.filter((path) => path.endsWith(".css"));
+
+for (const path of stylesheets) {
+    const stylesheet = await readFile(path, "utf8");
+    if (stylesheet.includes("data:font/") && !fontSource.includes("data:")) {
+        throw new Error(
+            `${relative(outputRoot, path)} inlines a font as a data URI, but the Content Security Policy font-src is '${fontSource.trim()}'.`,
         );
     }
 }

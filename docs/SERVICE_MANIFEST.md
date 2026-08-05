@@ -78,7 +78,7 @@
 - User uploads: none
 - Sensitive data: none
 - Cross-origin isolation: disabled in the single-threaded v1
-- Content Security Policy: same-origin assets, inline Astro scripts, and WebAssembly execution only
+- Content Security Policy: same-origin assets, inline Astro scripts, build-inlined font data URIs, and WebAssembly execution only
 - Minimum interactive viewport: 1024 × 640; smaller viewports do not download the runtime
 
 ## Deploy
