@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 docker run --rm --volume $mount --workdir /src $emscriptenImage `
-    cmake --build build/emscripten --target physics_lab_pendulum --parallel
+    cmake --build build/emscripten --parallel
 if ($LASTEXITCODE -ne 0) {
     throw "Emscripten build failed with exit code $LASTEXITCODE."
 }

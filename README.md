@@ -5,9 +5,10 @@ physical theory. Existing C++20 simulations are compiled to WebAssembly with
 Emscripten and rendered through Raylib, Dear ImGui, and WebGL directly in the
 visitor's browser.
 
-The first published laboratory is the simple and double pendulum simulation.
-Ballistics and gas/Brownian motion are represented in the data-driven catalog
-as planned laboratories.
+The published laboratories are ballistics, the simple and double pendulum, and
+the gas and Brownian motion particle bath. Each one ships an independently
+loaded WebAssembly bundle, so a visitor downloads only the laboratory that was
+opened.
 
 ## Architecture
 
@@ -36,18 +37,18 @@ flowchart TD
 		Native -->|exact pinned revision| Web
 ```
 
-The web build compiles selected public Project 2 sources but excludes the
-native `main.cpp` and `PendulumApplication.cpp`. This keeps the native
+The web build compiles selected public sources from each native project but
+excludes their `main.cpp` and application classes. This keeps the native
 repository focused on local C++ applications without functional web changes.
 
 ## Site structure
 
 - `/` — simulation catalog.
-- `/simulations/pendulum/` — interactive WebAssembly simulation.
-- `/simulations/pendulum/theory/` — canonical Markdown theory rendered with
-  KaTeX and accessible MathML.
+- `/simulations/<id>/` — interactive WebAssembly simulation.
+- `/simulations/<id>/theory/` — canonical Markdown theory rendered with KaTeX
+  and accessible MathML.
 - `src/data/simulations.ts` — validated source of navigation, routes, status,
-  source paths, and runtime metadata.
+  shortcuts, source paths, and runtime metadata.
 
 The collapsible sidebar and catalog are generated from this registry. A new
 simulation should add one registry entry, one browser adapter/bundle, and one
@@ -71,7 +72,7 @@ npm ci
 
 ## Development
 
-Build the WebAssembly runtime with the pinned Emscripten 6.0.5 container:
+Build the WebAssembly runtimes with the pinned Emscripten 6.0.5 container:
 
 ```text
 ./scripts/build-web.ps1

@@ -32,7 +32,7 @@ const runtimeAvailable = Boolean(
           Interactive simulation
         </h2>
         <div class="simulation-runtime__toolbar">
-          <p>Space: start/pause · R: reset · 1/2: change model</p>
+          <p>{simulation.shortcuts}</p>
           <button
             class="simulation-runtime__fullscreen"
             type="button"
@@ -100,7 +100,7 @@ const runtimeAvailable = Boolean(
     onRuntimeInitialized: () => void;
     onAbort: (reason: unknown) => void;
     printErr: (message: unknown) => void;
-    _physicsLabResizePendulumCanvas?: (width: number, height: number) => void;
+    _physicsLabResizeCanvas?: (width: number, height: number) => void;
   }
 
   const root = document.querySelector<HTMLElement>("[data-simulation-runtime]");
@@ -146,7 +146,7 @@ const runtimeAvailable = Boolean(
     function synchronizeCanvasSize() {
       const module = (window as Window & { Module?: EmscriptenModuleConfig })
         .Module;
-      module?._physicsLabResizePendulumCanvas?.(
+      module?._physicsLabResizeCanvas?.(
         Math.max(1, Math.round(runtimeCanvas.clientWidth)),
         Math.max(1, Math.round(runtimeCanvas.clientHeight)),
       );

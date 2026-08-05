@@ -71,8 +71,12 @@ describe("simulation registry", () => {
 
     it("provides a runtime only for published simulations", () => {
         for (const simulation of simulations) {
+            expect(simulation.shortcuts.length).toBeGreaterThan(0);
+
             if (simulation.status === "published") {
-                expect(simulation.runtimeScript).toMatch(/^\/runtime\/.+\.js$/);
+                expect(simulation.runtimeScript).toBe(
+                    `/runtime/${simulation.id}/${simulation.id}.js`,
+                );
             } else {
                 expect(simulation.runtimeScript).toBeUndefined();
             }
@@ -87,35 +91,59 @@ describe("simulation registry", () => {
         );
     });
 
-    it("keeps the web source manifest aligned with the native Project 2 target", async () => {
-        const [nativeCmake, webCmake] = await Promise.all([
-            readFile(
-                resolve(nativeSourceRoot, "project2_pendulum/CMakeLists.txt"),
+    it("keeps the web source manifest aligned with every native target", async () => {
+        const targets = [
+            {
+                projectDirectory: "project1_balistica",
+                nativeList: "PROJECT1_BALISTICA_SOURCES",
+                webList: "BALLISTICS_NATIVE_SOURCES",
+                excluded: ["src/main.cpp", "src/app/Application.cpp"],
+            },
+            {
+                projectDirectory: "project2_pendulum",
+                nativeList: "PROJECT2_PENDULUM_SOURCES",
+                webList: "PENDULUM_NATIVE_SOURCES",
+                excluded: ["src/main.cpp", "src/app/PendulumApplication.cpp"],
+            },
+            {
+                projectDirectory: "project3_gas_brownian",
+                nativeList: "PROJECT3_GAS_BROWNIAN_SOURCES",
+                webList: "GAS_BROWNIAN_NATIVE_SOURCES",
+                excluded: [
+                    "src/main.cpp",
+                    "src/app/GasBrownianApplication.cpp",
+                ],
+            },
+        ];
+
+        const webCmake = await readFile(
+            resolve(repositoryRoot, "CMakeLists.txt"),
+            "utf8",
+        );
+
+        for (const target of targets) {
+            const nativeCmake = await readFile(
+                resolve(
+                    nativeSourceRoot,
+                    `${target.projectDirectory}/CMakeLists.txt`,
+                ),
                 "utf8",
-            ),
-            readFile(resolve(repositoryRoot, "CMakeLists.txt"), "utf8"),
-        ]);
+            );
 
-        const nativeSources = readCmakeList(
-            nativeCmake,
-            "PROJECT2_PENDULUM_SOURCES",
-        )
-            .filter(
-                (source) =>
-                    source !== "src/main.cpp" &&
-                    source !== "src/app/PendulumApplication.cpp",
-            )
-            .map((source) =>
-                source.startsWith("../core/")
-                    ? source.slice(3)
-                    : `project2_pendulum/${source}`,
-            )
-            .toSorted();
-        const webSources = readCmakeList(
-            webCmake,
-            "PENDULUM_NATIVE_SOURCES",
-        ).toSorted();
+            const nativeSources = readCmakeList(nativeCmake, target.nativeList)
+                .filter((source) => !target.excluded.includes(source))
+                .map((source) =>
+                    source.startsWith("../core/")
+                        ? source.slice(3)
+                        : `${target.projectDirectory}/${source}`,
+                )
+                .toSorted();
+            const webSources = readCmakeList(
+                webCmake,
+                target.webList,
+            ).toSorted();
 
-        expect(webSources).toEqual(nativeSources);
+            expect(webSources).toEqual(nativeSources);
+        }
     });
 });

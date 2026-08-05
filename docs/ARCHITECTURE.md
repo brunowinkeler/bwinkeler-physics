@@ -108,8 +108,9 @@ new CSS dimensions and resizes Raylib on the following animation frame.
 - browser tests, artifact budgets, and deployment.
 
 The web build compiles selected source files from the submodule but excludes the
-native Project 2 `main.cpp` and `PendulumApplication.cpp`. CI must detect drift
-between the native source list and the web source list.
+native per-project `main.cpp` and application classes. Browser-only policy lives
+in `web/common/WebRuntime.h` and is shared by every adapter. CI must detect drift
+between each native source list and its web counterpart.
 
 ## Catalog model
 

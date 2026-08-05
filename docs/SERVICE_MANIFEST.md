@@ -44,26 +44,25 @@
 - CMake: 3.24 or newer
 - Native source: exact Git submodule revision
 - Install command: `npm ci`
-- WebAssembly build on Windows: `scripts/build-web.ps1`
-- Validation command: `npm run validate`
+- WebAssembly build on Windows: `scripts/build-web.ps1`- Validation command: `npm run validate`
 - Static output: `dist`
 
 ## Content contract
 
 - Simulation registry: `src/data/simulations.ts`
 - Canonical theory: `vendor/cpp-physics-simulation/project*/PHYSICS_THEORY.md`
-- Published v1 simulation: `pendulum`
-- Planned entries: `ballistics`, `gas-brownian`
+- Published simulations: `ballistics`, `pendulum`, `gas-brownian`
+- Runtime bundles: one independently loaded bundle per simulation
 - Theory rendering: build-time KaTeX HTML and MathML
 
 ## Health and operations
 
 - Liveness: `GET /`
-- Pendulum runtime: `GET /simulations/pendulum/`
-- Pendulum theory: `GET /simulations/pendulum/theory/`
+- Simulation routes: `GET /simulations/{ballistics,pendulum,gas-brownian}/`
+- Theory routes: `GET /simulations/{ballistics,pendulum,gas-brownian}/theory/`
 - Smoke test: browser load, runtime readiness, canvas, controls, and no console errors
 - Expected server RAM and CPU: not applicable to static Pages assets
-- Client performance target: responsive 60 Hz at default pendulum settings on a representative desktop
+- Client performance target: responsive 60 Hz at default settings on a representative desktop
 - Canvas sizing: one Raylib coordinate per canvas CSS pixel
 - Browser UI: 18-pixel Dear ImGui font with scaled controls
 - Focus mode: Fullscreen API with an in-page enter/exit control and `Escape` support

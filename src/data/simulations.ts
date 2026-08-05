@@ -26,6 +26,7 @@ export interface SimulationDefinition {
     sourceDirectory: string;
     theoryFile: string;
     runtimeScript?: string;
+    shortcuts: string;
     minimumViewport: {
         width: number;
         height: number;
@@ -41,10 +42,12 @@ export const simulations: readonly SimulationDefinition[] = [
             "Explore two-dimensional projectile motion, drag, impact interpolation, and numerical integration.",
         category: "mechanics",
         order: 10,
-        status: "coming-soon",
+        status: "published",
         engine: "Raylib",
         sourceDirectory: "project1_balistica",
         theoryFile: "project1_balistica/PHYSICS_THEORY.md",
+        runtimeScript: "/runtime/ballistics/ballistics.js",
+        shortcuts: "Space: launch or pause · R: reset",
         minimumViewport: { width: 1024, height: 640 },
     },
     {
@@ -60,6 +63,7 @@ export const simulations: readonly SimulationDefinition[] = [
         sourceDirectory: "project2_pendulum",
         theoryFile: "project2_pendulum/PHYSICS_THEORY.md",
         runtimeScript: "/runtime/pendulum/pendulum.js",
+        shortcuts: "Space: start or pause · R: reset · 1/2: change model",
         minimumViewport: { width: 1024, height: 640 },
     },
     {
@@ -70,10 +74,13 @@ export const simulations: readonly SimulationDefinition[] = [
             "Study elastic collisions, effective temperature, pressure, and Brownian trajectories in a particle bath.",
         category: "statistical-physics",
         order: 10,
-        status: "coming-soon",
+        status: "published",
         engine: "Raylib",
         sourceDirectory: "project3_gas_brownian",
         theoryFile: "project3_gas_brownian/PHYSICS_THEORY.md",
+        runtimeScript: "/runtime/gas-brownian/gas-brownian.js",
+        shortcuts:
+            "Space: start or pause · R: reset · 1/2: change mode · T: tracer trail",
         minimumViewport: { width: 1024, height: 640 },
     },
 ] as const;

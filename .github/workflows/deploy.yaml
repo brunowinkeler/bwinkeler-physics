@@ -50,7 +50,7 @@ jobs:
       - name: Build WebAssembly runtime
         run: |
           emcmake cmake --fresh -S . -B build/emscripten -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/emscripten --target physics_lab_pendulum --parallel
+          cmake --build build/emscripten --parallel
 
       - name: Build static site
         run: npm run build

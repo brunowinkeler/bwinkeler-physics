@@ -16,10 +16,9 @@ Consume `cpp-physics-simulation` as an exact Git submodule revision. Keep the
 Emscripten CMake graph, browser entry point, frame-work policy, and deployment in
 `bwinkeler-physics`.
 
-The web target compiles selected production sources and excludes native
-`main.cpp` and `PendulumApplication.cpp`. Changes to the source repository for
-v1 are limited to license, third-party notices, English theory, and a link to the
-web consumer.
+The web target compiles selected production sources and excludes each native
+`main.cpp` and application class. Changes to the source repository are limited to
+license, third-party notices, English theory, and a link to the web consumer.
 
 ## Consequences
 

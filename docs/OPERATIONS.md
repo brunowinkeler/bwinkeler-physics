@@ -6,7 +6,7 @@
    `git submodule update --init --recursive`.
 2. Install JavaScript dependencies with `npm ci`.
 3. Start Docker Desktop.
-4. Build the Pendulum runtime with `scripts/build-web.ps1`.
+4. Build the runtimes with `scripts/build-web.ps1`.
 5. Start the site with `npm run dev`.
 
 The site intentionally builds without generated runtime artifacts and displays a
@@ -21,7 +21,7 @@ After any browser-adapter, source-selection, compiler, or C++ revision change:
 
 1. rebuild WebAssembly from a clean Emscripten build directory;
 2. confirm generated `.js` and `.wasm` files remain under 25 MiB each;
-3. open the Pendulum route in supported browsers;
+3. open every published simulation route in supported browsers;
 4. exercise start, pause, reset, simple/double mode, camera, controls, and plots;
 5. verify the pointer and Dear ImGui controls remain aligned at multiple viewport sizes;
 6. enter and exit full screen, including with the `Escape` key;
@@ -56,8 +56,8 @@ database.
 ## Production verification
 
 - `https://physics.bwinkeler.com/` returns the catalog.
-- The Pendulum runtime initializes without console errors.
-- The theory route renders equations and MathML.
+- Every published simulation initializes without console errors.
+- Every theory route renders equations and MathML.
 - `.wasm` responses use `Content-Type: application/wasm`.
 - Brotli or gzip compression is available.
 - Security headers from `public/_headers` are present.
