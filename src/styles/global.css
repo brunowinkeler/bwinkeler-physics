@@ -20,6 +20,7 @@
     --warning: #f9e2af;
     --sidebar-width: 18rem;
     --sidebar-collapsed-width: 4.5rem;
+    --controls-width: 22rem;
 }
 
 * {
@@ -511,6 +512,11 @@ a:hover {
     font-size: 0.9rem;
 }
 
+.simulation-runtime__toolbar-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .simulation-runtime__fullscreen {
     display: inline-flex;
     min-height: 2.25rem;
@@ -542,6 +548,23 @@ a:hover {
     opacity: 0.65;
 }
 
+.simulation-runtime__layout {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+}
+
+/* The column is sized by the panel, so hiding or collapsing it hands the whole
+   width back to the canvas without a second layout rule. */
+.simulation-runtime.has-controls .simulation-runtime__layout {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.simulation-runtime.is-controls-collapsed .simulation-controls {
+    display: none;
+}
+
 .simulation-runtime__viewport {
     position: relative;
     display: grid;
@@ -567,11 +590,28 @@ a:hover {
     background: #0e1018;
 }
 
+.simulation-runtime:fullscreen .simulation-runtime__layout,
+.simulation-runtime.is-fullscreen .simulation-runtime__layout {
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .simulation-runtime:fullscreen .simulation-runtime__viewport,
 .simulation-runtime.is-fullscreen .simulation-runtime__viewport {
     min-height: 0;
     flex: 1;
     aspect-ratio: auto;
+}
+
+/* Full screen keeps the whole canvas usable, so the panel floats over it. */
+.simulation-runtime:fullscreen .simulation-controls,
+.simulation-runtime.is-fullscreen .simulation-controls {
+    position: absolute;
+    z-index: 3;
+    inset: 0 0 0 auto;
+    width: var(--controls-width);
+    box-shadow: -1rem 0 2rem rgb(0 0 0 / 35%);
 }
 
 .simulation-runtime__status {
@@ -613,6 +653,272 @@ a:hover {
     to {
         transform: rotate(1turn);
     }
+}
+
+.simulation-controls {
+    position: relative;
+    width: var(--controls-width);
+    overflow: hidden;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+}
+
+.simulation-controls[hidden] {
+    display: none;
+}
+
+/* The scroller is taken out of flow so the panel never stretches the grid row
+   that the canvas aspect ratio defines. */
+.simulation-controls__scroll {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: start;
+    gap: 1.25rem;
+    padding: 1rem;
+    overflow-y: auto;
+    font-size: 0.875rem;
+}
+
+.simulation-controls__actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.simulation-controls__actions button {
+    flex: 1;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.6rem;
+    color: var(--text);
+    font-weight: 650;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+.simulation-controls__actions button:hover:not(:disabled) {
+    color: #11131c;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.simulation-controls__actions button:disabled {
+    color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.simulation-controls__hint {
+    margin: 0;
+    color: var(--warning);
+    font-size: 0.8rem;
+}
+
+.simulation-controls__hint[hidden] {
+    display: none;
+}
+
+.simulation-controls__group {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+}
+
+.simulation-controls__group > legend,
+.simulation-controls__group > h3 {
+    margin: 0;
+    padding: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.simulation-controls__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.simulation-controls__row[hidden] {
+    display: none;
+}
+
+.simulation-controls__row.is-disabled {
+    opacity: 0.55;
+}
+
+.simulation-controls__label {
+    color: var(--text);
+    line-height: 1.3;
+}
+
+.simulation-controls__unit {
+    margin-left: 0.25rem;
+    color: var(--muted);
+}
+
+.simulation-controls__row input[type="number"],
+.simulation-controls__row select {
+    width: 100%;
+    min-height: 2rem;
+    padding: 0.25rem 0.4rem;
+    color: var(--text);
+    font: inherit;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+}
+
+.simulation-controls__row select {
+    grid-column: 1 / -1;
+}
+
+.simulation-controls__row input[type="checkbox"] {
+    width: 1.05rem;
+    height: 1.05rem;
+    justify-self: end;
+    accent-color: var(--accent);
+}
+
+.simulation-controls__row :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.simulation-controls__help {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.simulation-controls__readouts {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+}
+
+.simulation-controls__readout {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.simulation-controls__readout[hidden] {
+    display: none;
+}
+
+.simulation-controls__readout dt {
+    color: var(--muted);
+}
+
+.simulation-controls__readout dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.simulation-controls__plot {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+}
+
+.simulation-controls__plot figcaption {
+    color: var(--text);
+    font-weight: 650;
+}
+
+.simulation-controls__plot canvas {
+    display: block;
+    width: 100%;
+    height: 9rem;
+    border-radius: 0.4rem;
+}
+
+.simulation-controls__plot[hidden] {
+    display: none;
+}
+
+.simulation-controls__records {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.simulation-controls__record {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+}
+
+.simulation-controls__record > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.5rem;
+    cursor: pointer;
+}
+
+.simulation-controls__record > button {
+    margin: 0 0.5rem 0.5rem;
+    padding: 0.25rem 0.5rem;
+    color: var(--text);
+    font: inherit;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    cursor: pointer;
+}
+
+.simulation-controls__record > button:hover {
+    color: #11131c;
+    background: #f38ba8;
+    border-color: #f38ba8;
+}
+
+.simulation-controls__swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex: none;
+    border-radius: 50%;
+}
+
+.simulation-controls__record-details {
+    display: grid;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0 0.5rem 0.5rem 1.7rem;
+}
+
+.simulation-controls__record-details > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.simulation-controls__record-details dt {
+    color: var(--muted);
+}
+
+.simulation-controls__record-details dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.simulation-controls__shortcuts {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
 }
 
 .lab-placeholder {

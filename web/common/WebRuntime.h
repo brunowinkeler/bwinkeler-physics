@@ -5,7 +5,6 @@
 
 #include "imgui.h"
 #include "raylib.h"
-#include "rlImGui.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,8 +19,6 @@ namespace physicslab
     inline constexpr float DEFAULT_FRAME_TIME = 1.0f / 60.0f;
     inline constexpr float MAX_FRAME_TIME = 1.0f / 30.0f;
     inline constexpr float MAX_PHYSICS_SUBSTEPS_PER_FRAME = 1000.0f;
-    inline constexpr float WEB_UI_FONT_SIZE = 18.0f;
-    inline constexpr float WEB_UI_CONTROL_SCALE = 1.15f;
 
     struct CanvasSize
     {
@@ -56,33 +53,37 @@ namespace physicslab
         SetExitKey(KEY_NULL);
     }
 
-    inline void setupWebImGui()
+    // Controls live in the DOM, but the pinned native camera classes still read
+    // Dear ImGui IO to decide whether pointer and keyboard input belong to the
+    // scene. Creating the context without ever starting a frame keeps every
+    // WantCapture flag false, which is the answer those classes need.
+    inline void setupImGuiInputStub()
     {
-        rlImGuiBeginInitImGui();
-        ImGui::StyleColorsDark();
+        ImGui::CreateContext();
 
         ImGuiIO &io = ImGui::GetIO();
         io.IniFilename = nullptr;
-        io.Fonts->Clear();
-
-        ImFontConfig fontConfig;
-        fontConfig.SizePixels = WEB_UI_FONT_SIZE;
-        fontConfig.PixelSnapH = true;
-        io.Fonts->AddFontDefault(&fontConfig);
-
-        ImGui::GetStyle().ScaleAllSizes(WEB_UI_CONTROL_SCALE);
-        rlImGuiEndInitImGui();
+        io.DisplaySize = ImVec2(static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight()));
     }
 
     inline void shutdownWebRuntime()
     {
-        rlImGuiShutdown();
+        ImGui::DestroyContext();
         CloseWindow();
+    }
+
+    // Raylib listens for key events on the document, so the control panel has to
+    // announce when it owns the keyboard or typing a parameter would also
+    // trigger simulation shortcuts.
+    inline bool &keyboardCapturedByDocument()
+    {
+        static bool captured = false;
+        return captured;
     }
 
     inline bool keyboardAvailable()
     {
-        return !ImGui::GetIO().WantCaptureKeyboard && !ImGui::GetIO().WantTextInput;
+        return !keyboardCapturedByDocument();
     }
 
     inline float normalizedFrameTime(float frameTime)

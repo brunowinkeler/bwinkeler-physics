@@ -1,0 +1,146 @@
+---
+import type { SimulationControlsDefinition } from "../data/controls";
+
+interface Props {
+  definition: SimulationControlsDefinition;
+  simulationTitle: string;
+  panelId: string;
+}
+
+const { definition, simulationTitle, panelId } = Astro.props;
+---
+
+<aside
+  id={panelId}
+  class="simulation-controls"
+  data-simulation-controls
+  aria-label={`${simulationTitle} controls`}
+  hidden
+>
+  <div class="simulation-controls__scroll">
+    <div class="simulation-controls__actions">
+      <button type="button" data-control-action="start">Start</button>
+      <button type="button" data-control-action="stop" disabled>Pause</button>
+      <button type="button" data-control-action="reset">Reset</button>
+    </div>
+    <p class="simulation-controls__hint" data-control-hint hidden>
+      {definition.editHint}
+    </p>
+
+    {
+      definition.groups.map((group) => (
+        <fieldset class="simulation-controls__group">
+          <legend>{group.title}</legend>
+          {group.fields.map((field) => (
+            <div class="simulation-controls__row" data-control-row>
+              <label
+                class="simulation-controls__label"
+                for={`control-${field.parameter}`}
+              >
+                {field.label}
+                {field.unit && (
+                  <span class="simulation-controls__unit"> ({field.unit})</span>
+                )}
+              </label>
+              {field.kind === "select" ? (
+                <select
+                  id={`control-${field.parameter}`}
+                  data-control-parameter={field.parameter}
+                >
+                  {(field.options ?? []).map((option) => (
+                    <option value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : field.kind === "checkbox" ? (
+                <input
+                  id={`control-${field.parameter}`}
+                  type="checkbox"
+                  data-control-parameter={field.parameter}
+                />
+              ) : (
+                <input
+                  id={`control-${field.parameter}`}
+                  type="number"
+                  inputmode="decimal"
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  data-control-parameter={field.parameter}
+                />
+              )}
+              {field.help && (
+                <p class="simulation-controls__help">{field.help}</p>
+              )}
+            </div>
+          ))}
+        </fieldset>
+      ))
+    }
+
+    <section class="simulation-controls__group">
+      <h3>Status</h3>
+      <dl class="simulation-controls__readouts">
+        {
+          definition.readouts.map((readout, index) => (
+            <div
+              class="simulation-controls__readout"
+              data-readout-index={index}
+            >
+              <dt>
+                {readout.label}
+                {readout.unit && (
+                  <span class="simulation-controls__unit">
+                    ({readout.unit})
+                  </span>
+                )}
+              </dt>
+              <dd data-readout-value>—</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+
+    {
+      definition.plots.length > 0 && (
+        <section class="simulation-controls__group">
+          <h3>Analysis</h3>
+          {definition.plots.map((plot) => (
+            <figure class="simulation-controls__plot" data-plot-figure>
+              <figcaption>{plot.title}</figcaption>
+              <canvas
+                data-plot-canvas={plot.id}
+                role="img"
+                aria-label={plot.title}
+              />
+              <p class="simulation-controls__help" data-plot-caption={plot.id}>
+                {plot.caption}
+              </p>
+            </figure>
+          ))}
+        </section>
+      )
+    }
+
+    {
+      definition.records && (
+        <section class="simulation-controls__group">
+          <h3>{definition.records.title}</h3>
+          <div class="simulation-controls__actions">
+            <button type="button" data-control-action="clear-records">
+              {definition.records.clearLabel}
+            </button>
+          </div>
+          <div class="simulation-controls__records" data-record-list />
+        </section>
+      )
+    }
+
+    <section class="simulation-controls__group">
+      <h3>Keyboard and mouse</h3>
+      <ul class="simulation-controls__shortcuts">
+        {definition.shortcuts.map((shortcut) => <li>{shortcut}</li>)}
+      </ul>
+    </section>
+  </div>
+</aside>

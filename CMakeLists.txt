@@ -45,6 +45,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+# Dear ImGui is still linked because the pinned native camera classes read its IO
+# to decide whether pointer and keyboard input belong to the scene. The browser
+# never starts an ImGui frame, so the rlImGui backend is not part of the graph
+# and link-time optimization drops the unreachable draw code.
 add_library(physics_lab_imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -53,24 +57,15 @@ add_library(physics_lab_imgui STATIC
 )
 target_include_directories(physics_lab_imgui PUBLIC ${imgui_SOURCE_DIR})
 
-FetchContent_Declare(
-    rlimgui
-    GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
-    GIT_TAG 286e11acd6c785004c9550c7ed3762add2ae3d47
-)
-FetchContent_MakeAvailable(rlimgui)
-
 set(BALLISTICS_NATIVE_SOURCES
     project1_balistica/src/physics/Projectile.cpp
     project1_balistica/src/rendering/BackgroundRenderer.cpp
     project1_balistica/src/rendering/Camera.cpp
     project1_balistica/src/rendering/ProjectileCoordinatesAdapter.cpp
     project1_balistica/src/rendering/ProjectileRenderer.cpp
-    project1_balistica/src/rendering/SimulationOverlayRenderer.cpp
     project1_balistica/src/rendering/SimulationSceneRenderer.cpp
     project1_balistica/src/rendering/TrajectoryRenderer.cpp
     project1_balistica/src/simulation/Simulation.cpp
-    project1_balistica/src/ui/UiMenus.cpp
     core/physics/IntegrationMethod.cpp
     core/simulation/TrajectoryRecorder.cpp
 )
@@ -80,12 +75,10 @@ set(PENDULUM_NATIVE_SOURCES
     project2_pendulum/src/physics/DoublePendulum.cpp
     project2_pendulum/src/rendering/PendulumBackgroundRenderer.cpp
     project2_pendulum/src/rendering/PendulumCamera.cpp
-    project2_pendulum/src/rendering/PendulumOverlayRenderer.cpp
     project2_pendulum/src/rendering/PendulumRenderer.cpp
     project2_pendulum/src/rendering/PendulumSceneRenderer.cpp
     project2_pendulum/src/rendering/PendulumTrajectoryRenderer.cpp
     project2_pendulum/src/simulation/PendulumSimulation.cpp
-    project2_pendulum/src/ui/PendulumUiMenus.cpp
     core/physics/IntegrationMethod.cpp
     core/simulation/TrajectoryRecorder.cpp
 )
@@ -94,16 +87,9 @@ set(GAS_BROWNIAN_NATIVE_SOURCES
     project3_gas_brownian/src/physics/GasCollision.cpp
     project3_gas_brownian/src/physics/GasPreset.cpp
     project3_gas_brownian/src/rendering/GasCamera.cpp
-    project3_gas_brownian/src/rendering/GasOverlayRenderer.cpp
     project3_gas_brownian/src/rendering/GasSceneRenderer.cpp
     project3_gas_brownian/src/simulation/GasSimulation.cpp
-    project3_gas_brownian/src/ui/GasUiMenus.cpp
     core/simulation/TrajectoryRecorder.cpp
-)
-
-set_source_files_properties(
-    ${rlimgui_SOURCE_DIR}/rlImGui.cpp
-    PROPERTIES COMPILE_OPTIONS "-w"
 )
 
 # Every simulation ships an independently loaded bundle so a visitor downloads
@@ -112,25 +98,26 @@ function(physics_lab_add_simulation)
     cmake_parse_arguments(SIMULATION
         ""
         "TARGET;RUNTIME_NAME;ENTRY_POINT;PROJECT_DIRECTORY"
-        "NATIVE_SOURCES"
+        "ADAPTER_SOURCES;NATIVE_SOURCES"
         ${ARGN}
     )
 
     set(simulation_sources "${CMAKE_CURRENT_SOURCE_DIR}/${SIMULATION_ENTRY_POINT}")
+    foreach(source IN LISTS SIMULATION_ADAPTER_SOURCES)
+        list(APPEND simulation_sources "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+    endforeach()
     foreach(source IN LISTS SIMULATION_NATIVE_SOURCES)
         list(APPEND simulation_sources "${PHYSICS_SOURCE_ROOT}/${source}")
     endforeach()
 
     add_executable(${SIMULATION_TARGET}
         ${simulation_sources}
-        ${rlimgui_SOURCE_DIR}/rlImGui.cpp
     )
 
     target_include_directories(${SIMULATION_TARGET} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/web
         ${PHYSICS_SOURCE_ROOT}
         ${PHYSICS_SOURCE_ROOT}/${SIMULATION_PROJECT_DIRECTORY}/src
-        ${rlimgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}
     )
 
@@ -161,6 +148,7 @@ function(physics_lab_add_simulation)
         "-sINITIAL_HEAP=67108864"
         "-sMAXIMUM_MEMORY=268435456"
         "-sDYNAMIC_EXECUTION=0"
+        "-sEXPORTED_RUNTIME_METHODS=['HEAPF32']"
         "-sASSERTIONS=$<IF:$<CONFIG:Release>,0,1>"
     )
 
@@ -177,6 +165,7 @@ physics_lab_add_simulation(
     RUNTIME_NAME ballistics
     ENTRY_POINT web/ballistics/main.cpp
     PROJECT_DIRECTORY project1_balistica
+    ADAPTER_SOURCES web/ballistics/BallisticsBridge.cpp
     NATIVE_SOURCES ${BALLISTICS_NATIVE_SOURCES}
 )
 
@@ -185,6 +174,7 @@ physics_lab_add_simulation(
     RUNTIME_NAME pendulum
     ENTRY_POINT web/pendulum/main.cpp
     PROJECT_DIRECTORY project2_pendulum
+    ADAPTER_SOURCES web/pendulum/PendulumBridge.cpp
     NATIVE_SOURCES ${PENDULUM_NATIVE_SOURCES}
 )
 
@@ -193,5 +183,6 @@ physics_lab_add_simulation(
     RUNTIME_NAME gas-brownian
     ENTRY_POINT web/gas-brownian/main.cpp
     PROJECT_DIRECTORY project3_gas_brownian
+    ADAPTER_SOURCES web/gas-brownian/GasBridge.cpp
     NATIVE_SOURCES ${GAS_BROWNIAN_NATIVE_SOURCES}
 )

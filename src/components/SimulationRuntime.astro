@@ -2,7 +2,10 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { getSimulationControls } from "../data/controls";
 import type { SimulationDefinition } from "../data/simulations";
+
+import SimulationControls from "./SimulationControls.astro";
 
 interface Props {
   simulation: SimulationDefinition;
@@ -10,6 +13,7 @@ interface Props {
 
 const { simulation } = Astro.props;
 const runtimeScript = simulation.runtimeScript;
+const controls = getSimulationControls(simulation.id);
 const runtimeAvailable = Boolean(
   runtimeScript &&
   existsSync(
@@ -22,8 +26,9 @@ const runtimeAvailable = Boolean(
   {
     runtimeAvailable && runtimeScript ? (
       <div
-        class="simulation-runtime"
+        class:list={["simulation-runtime", controls && "has-controls"]}
         data-simulation-runtime
+        data-simulation-id={simulation.id}
         data-runtime-script={runtimeScript}
         data-minimum-width={simulation.minimumViewport.width}
         data-minimum-height={simulation.minimumViewport.height}
@@ -33,45 +38,69 @@ const runtimeAvailable = Boolean(
         </h2>
         <div class="simulation-runtime__toolbar">
           <p>{simulation.shortcuts}</p>
-          <button
-            class="simulation-runtime__fullscreen"
-            type="button"
-            data-fullscreen-toggle
-            aria-label="Enter full screen"
-            hidden
-          >
-            <span data-fullscreen-icon aria-hidden="true">
-              ⛶
-            </span>
-            <span data-fullscreen-label>Full screen</span>
-          </button>
-        </div>
-        <div class="simulation-runtime__viewport">
-          <div
-            class="simulation-runtime__status"
-            data-runtime-status
-            role="status"
-          >
-            <span class="simulation-runtime__spinner" aria-hidden="true" />
-            <span data-runtime-status-text>Preparing WebAssembly runtime…</span>
+          <div class="simulation-runtime__toolbar-actions">
+            {controls && (
+              <button
+                class="simulation-runtime__fullscreen"
+                type="button"
+                data-controls-toggle
+                aria-expanded="true"
+                aria-controls="simulation-controls"
+              >
+                <span data-controls-label>Hide controls</span>
+              </button>
+            )}
+            <button
+              class="simulation-runtime__fullscreen"
+              type="button"
+              data-fullscreen-toggle
+              aria-label="Enter full screen"
+              hidden
+            >
+              <span data-fullscreen-icon aria-hidden="true">
+                ⛶
+              </span>
+              <span data-fullscreen-label>Full screen</span>
+            </button>
           </div>
-          <canvas
-            id="canvas"
-            class="simulation-runtime__canvas"
-            width="1280"
-            height="720"
-            tabindex="0"
-            aria-label={`${simulation.title} interactive simulation canvas`}
-          >
-            Your browser does not support the canvas required by this
-            simulation.
-          </canvas>
-          <noscript>
-            <p class="notice">
-              JavaScript and WebAssembly are required to run the interactive
-              simulation. The theory page remains available without them.
-            </p>
-          </noscript>
+        </div>
+        <div class="simulation-runtime__layout">
+          <div class="simulation-runtime__viewport">
+            <div
+              class="simulation-runtime__status"
+              data-runtime-status
+              role="status"
+            >
+              <span class="simulation-runtime__spinner" aria-hidden="true" />
+              <span data-runtime-status-text>
+                Preparing WebAssembly runtime…
+              </span>
+            </div>
+            <canvas
+              id="canvas"
+              class="simulation-runtime__canvas"
+              width="1280"
+              height="720"
+              tabindex="0"
+              aria-label={`${simulation.title} interactive simulation canvas`}
+            >
+              Your browser does not support the canvas required by this
+              simulation.
+            </canvas>
+            <noscript>
+              <p class="notice">
+                JavaScript and WebAssembly are required to run the interactive
+                simulation. The theory page remains available without them.
+              </p>
+            </noscript>
+          </div>
+          {controls && (
+            <SimulationControls
+              definition={controls}
+              simulationTitle={simulation.title}
+              panelId="simulation-controls"
+            />
+          )}
         </div>
       </div>
     ) : (
@@ -93,7 +122,18 @@ const runtimeAvailable = Boolean(
 </section>
 
 <script>
-  interface EmscriptenModuleConfig {
+  import { getSimulationControls } from "../data/controls";
+  import {
+    createSimulationBridge,
+    supportsDomControls,
+    type PhysicsLabModule,
+  } from "../scripts/simulation-bridge";
+  import {
+    attachSimulationControls,
+    type SimulationControlsHandle,
+  } from "../scripts/simulation-controls";
+
+  interface EmscriptenModuleConfig extends PhysicsLabModule {
     canvas: HTMLCanvasElement;
     setStatus: (message: string) => void;
     monitorRunDependencies: (remaining: number) => void;
@@ -140,8 +180,53 @@ const runtimeAvailable = Boolean(
     const runtimeScriptUrl = runtimeScript;
     const minimumWidth = Number(runtimeRoot.dataset.minimumWidth);
     const minimumHeight = Number(runtimeRoot.dataset.minimumHeight);
+    const controlsPanel = runtimeRoot.querySelector<HTMLElement>(
+      "[data-simulation-controls]",
+    );
+    const controlsToggle = runtimeRoot.querySelector<HTMLButtonElement>(
+      "[data-controls-toggle]",
+    );
+    const controlsToggleLabel = runtimeRoot.querySelector<HTMLElement>(
+      "[data-controls-label]",
+    );
+    const controlsDefinition = getSimulationControls(
+      runtimeRoot.dataset.simulationId ?? "",
+    );
     let runtimeStarted = false;
     let canvasResizeObserver: ResizeObserver | undefined;
+    let controlsHandle: SimulationControlsHandle | undefined;
+
+    function attachControls(physicsLab: EmscriptenModuleConfig) {
+      if (!controlsPanel || !controlsDefinition) return;
+
+      if (!supportsDomControls(physicsLab)) {
+        controlsPanel.hidden = true;
+        console.error(
+          "The simulation runtime does not export the control bridge.",
+        );
+        return;
+      }
+
+      controlsHandle = attachSimulationControls(
+        controlsPanel,
+        createSimulationBridge(physicsLab),
+        controlsDefinition,
+      );
+      controlsPanel.hidden = false;
+    }
+
+    function toggleControls() {
+      if (!controlsToggle || !controlsToggleLabel) return;
+
+      const collapsed = runtimeRoot.classList.toggle("is-controls-collapsed");
+      controlsToggle.setAttribute(
+        "aria-expanded",
+        collapsed ? "false" : "true",
+      );
+      controlsToggleLabel.textContent = collapsed
+        ? "Show controls"
+        : "Hide controls";
+    }
 
     function synchronizeCanvasSize() {
       const module = (window as Window & { Module?: EmscriptenModuleConfig })
@@ -230,6 +315,7 @@ const runtimeAvailable = Boolean(
           canvasResizeObserver.observe(runtimeCanvas);
           runtimeStatus.hidden = true;
           runtimeCanvas.focus({ preventScroll: true });
+          attachControls(moduleConfig);
         },
         onAbort(reason) {
           showError(`The simulation stopped: ${String(reason)}`);
@@ -279,12 +365,16 @@ const runtimeAvailable = Boolean(
     window.addEventListener("resize", handleViewportChange);
     window.addEventListener(
       "pagehide",
-      () => canvasResizeObserver?.disconnect(),
+      () => {
+        canvasResizeObserver?.disconnect();
+        controlsHandle?.dispose();
+      },
       { once: true },
     );
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     runtimeFullscreenButton.addEventListener("click", toggleFullscreen);
     runtimeFullscreenButton.hidden = !document.fullscreenEnabled;
+    controlsToggle?.addEventListener("click", toggleControls);
     handleViewportChange();
   }
 </script>

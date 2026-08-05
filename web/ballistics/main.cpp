@@ -1,9 +1,9 @@
 #include "common/WebRuntime.h"
 
-#include "rendering/SimulationOverlayRenderer.h"
+#include "BallisticsBridge.h"
+
 #include "rendering/SimulationSceneRenderer.h"
 #include "simulation/SimulationSession.h"
-#include "ui/UiMenus.h"
 
 #include <emscripten/emscripten.h>
 
@@ -13,16 +13,16 @@ namespace
     {
     public:
         WebBallisticsApplication()
-            : uiMenus{session},
-              sceneRenderer{session},
-              overlayRenderer{session.getSimulation()}
+            : sceneRenderer{session}
         {
             physicslab::openCanvasWindow("Physics Lab - Ballistics");
-            physicslab::setupWebImGui();
+            physicslab::setupImGuiInputStub();
+            physicslab::ballistics::bindSession(&session);
         }
 
         ~WebBallisticsApplication()
         {
+            physicslab::ballistics::bindSession(nullptr);
             physicslab::shutdownWebRuntime();
         }
 
@@ -34,6 +34,7 @@ namespace
             sceneRenderer.updateCamera(frameTime);
             updateSimulation(frameTime);
             draw();
+            physicslab::ballistics::publishFrameState();
         }
 
         float simulationTime() const
@@ -75,10 +76,12 @@ namespace
 
         void syncSceneHighlights()
         {
-            sceneRenderer.setHighlightedLaunches(uiMenus.getSelectedHistoryEntryId(),
-                                                 uiMenus.getHoveredHistoryEntryId());
+            const physicslab::ballistics::HighlightedLaunches highlights =
+                physicslab::ballistics::highlightedLaunches();
+            sceneRenderer.setHighlightedLaunches(highlights.selectedId, highlights.hoveredId);
         }
 
+        // The control panel lives in the DOM, so the canvas only draws the scene.
         void draw()
         {
             BeginDrawing();
@@ -86,22 +89,17 @@ namespace
 
             syncSceneHighlights();
             sceneRenderer.render();
-            overlayRenderer.render();
 
             if (performanceLimited)
             {
                 physicslab::drawPerformanceWarning();
             }
 
-            uiMenus.parametersSelectionScreen();
-            syncSceneHighlights();
             EndDrawing();
         }
 
         physim::SimulationSession session;
-        physim::UiMenus uiMenus;
         physim::SimulationSceneRenderer sceneRenderer;
-        physim::SimulationOverlayRenderer overlayRenderer;
         bool performanceLimited{false};
     };
 

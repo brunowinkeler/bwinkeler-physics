@@ -1,0 +1,265 @@
+import type { SimulationControlsDefinition } from "./types";
+
+// The order of both tables is the contract with `web/gas-brownian/GasBridge.h`.
+// `tests/controls.test.ts` fails the build if the C++ enums drift.
+export const gasParameterOrder = [
+    "mode",
+    "timeScale",
+    "particleCount",
+    "gasPreset",
+    "boxWidth",
+    "boxHeight",
+    "physicsTimeStep",
+    "thermalLevel",
+    "randomSeed",
+    "showGrid",
+    "showPressurePlot",
+    "tracerTrail",
+    "tracerMassScale",
+    "tracerRadiusScale",
+] as const;
+
+export const gasStateOrder = [
+    "simulationState",
+    "mode",
+    "time",
+    "pressure",
+    "temperature",
+    "averageKineticEnergy",
+    "averageSpeed",
+    "activeParticles",
+] as const;
+
+const IDEAL_GAS = 0;
+const BROWNIAN = 1;
+
+const gasPresets = [
+    { label: "Helium", value: 0 },
+    { label: "Air", value: 1 },
+    { label: "Argon", value: 2 },
+    { label: "Carbon dioxide", value: 3 },
+] as const;
+
+export const gasControls: SimulationControlsDefinition = {
+    parameterOrder: gasParameterOrder,
+    stateOrder: gasStateOrder,
+    // The bath is rebuilt on every change, so a paused run still accepts edits.
+    editableStates: [0, 2],
+    runningStates: [1],
+    resumeStates: [2],
+    variantParameter: "mode",
+    variantSlot: "mode",
+    simulationStateSlot: "simulationState",
+    editHint: "Pause or reset to reconfigure the particle bath.",
+    groups: [
+        {
+            id: "mode",
+            title: "Simulation mode",
+            fields: [
+                {
+                    parameter: "mode",
+                    label: "Model",
+                    kind: "select",
+                    editableOnly: true,
+                    options: [
+                        { label: "Ideal gas", value: IDEAL_GAS },
+                        { label: "Brownian motion", value: BROWNIAN },
+                    ],
+                    help: "Brownian mode adds a heavier tracer moving inside the particle bath.",
+                },
+            ],
+        },
+        {
+            id: "bath",
+            title: "Bath and box",
+            fields: [
+                {
+                    parameter: "timeScale",
+                    label: "Time scale",
+                    kind: "number",
+                    unit: "×",
+                    min: 0.1,
+                    max: 20,
+                    step: 0.1,
+                    precision: 2,
+                },
+                {
+                    parameter: "particleCount",
+                    label: "Particle count",
+                    kind: "number",
+                    min: 1,
+                    max: 20000,
+                    step: 100,
+                    precision: 0,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "gasPreset",
+                    label: "Gas preset",
+                    kind: "select",
+                    options: gasPresets,
+                    editableOnly: true,
+                    help: "Presets change molar mass, particle mass and the effective collision radius.",
+                },
+                {
+                    parameter: "boxWidth",
+                    label: "Box width",
+                    kind: "number",
+                    unit: "m",
+                    min: 4,
+                    max: 30,
+                    step: 0.25,
+                    precision: 2,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "boxHeight",
+                    label: "Box height",
+                    kind: "number",
+                    unit: "m",
+                    min: 2,
+                    max: 20,
+                    step: 0.25,
+                    precision: 2,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "physicsTimeStep",
+                    label: "Physics time step",
+                    kind: "number",
+                    unit: "s",
+                    min: 0.0001,
+                    max: 0.0166,
+                    step: 0.0005,
+                    precision: 5,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "thermalLevel",
+                    label: "Thermal level",
+                    kind: "number",
+                    unit: "K",
+                    min: 20,
+                    max: 600,
+                    step: 5,
+                    precision: 1,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "randomSeed",
+                    label: "Seed",
+                    kind: "number",
+                    min: 0,
+                    max: 1000000000,
+                    step: 1,
+                    precision: 0,
+                    editableOnly: true,
+                },
+            ],
+        },
+        {
+            id: "tracer",
+            title: "Brownian tracer",
+            fields: [
+                {
+                    parameter: "tracerTrail",
+                    label: "Record tracer trail",
+                    kind: "checkbox",
+                    variant: BROWNIAN,
+                    help: "Disable the trail to reduce update and draw cost at higher particle counts.",
+                },
+                {
+                    parameter: "tracerMassScale",
+                    label: "Tracer mass scale",
+                    kind: "number",
+                    unit: "×",
+                    min: 1,
+                    max: 64,
+                    step: 1,
+                    precision: 2,
+                    variant: BROWNIAN,
+                    editableOnly: true,
+                },
+                {
+                    parameter: "tracerRadiusScale",
+                    label: "Tracer radius scale",
+                    kind: "number",
+                    unit: "×",
+                    min: 1,
+                    max: 8,
+                    step: 0.25,
+                    precision: 2,
+                    variant: BROWNIAN,
+                    editableOnly: true,
+                },
+            ],
+        },
+        {
+            id: "display",
+            title: "Display",
+            fields: [
+                { parameter: "showGrid", label: "Show grid", kind: "checkbox" },
+                {
+                    parameter: "showPressurePlot",
+                    label: "Show pressure plot",
+                    kind: "checkbox",
+                },
+            ],
+        },
+    ],
+    readouts: [
+        { slot: "simulationState", label: "State", format: "state" },
+        { slot: "time", label: "Simulation time", unit: "s", precision: 3 },
+        {
+            slot: "pressure",
+            label: "Instantaneous pressure",
+            unit: "N/m",
+            format: "exponential",
+            precision: 3,
+        },
+        {
+            slot: "temperature",
+            label: "Effective temperature",
+            unit: "K",
+            precision: 2,
+        },
+        {
+            slot: "averageKineticEnergy",
+            label: "Average kinetic energy",
+            unit: "J",
+            format: "exponential",
+            precision: 3,
+        },
+        {
+            slot: "averageSpeed",
+            label: "Average speed",
+            unit: "m/s",
+            precision: 3,
+        },
+        {
+            slot: "activeParticles",
+            label: "Active particles",
+            format: "integer",
+        },
+    ],
+    plots: [
+        {
+            id: "pressure",
+            title: "Pressure history",
+            source: "series",
+            unit: "N/m",
+            exponential: true,
+            caption:
+                "Instantaneous wall loading over the recent sliding window.",
+            emptyMessage: "No pressure samples recorded yet.",
+            requiresParameter: "showPressurePlot",
+        },
+    ],
+    shortcuts: [
+        "Space: start or pause",
+        "R: reset",
+        "1 / 2: change mode",
+        "T: tracer trail",
+        "WASD: pan · Q/E: zoom · F: reset camera",
+    ],
+};

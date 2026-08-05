@@ -1,10 +1,10 @@
 #include "common/WebRuntime.h"
 
+#include "PendulumBridge.h"
+
 #include "physics/PendulumMode.h"
-#include "rendering/PendulumOverlayRenderer.h"
 #include "rendering/PendulumSceneRenderer.h"
 #include "simulation/PendulumSession.h"
-#include "ui/PendulumUiMenus.h"
 
 #include <emscripten/emscripten.h>
 
@@ -14,17 +14,17 @@ namespace
     {
     public:
         WebPendulumApplication()
-            : uiMenus{session},
-              sceneRenderer{session},
-              overlayRenderer{session}
+            : sceneRenderer{session}
         {
             physicslab::openCanvasWindow("Physics Lab - Pendulum");
-            physicslab::setupWebImGui();
+            physicslab::setupImGuiInputStub();
             sceneRenderer.resetCamera();
+            physicslab::pendulum::bindSession(&session);
         }
 
         ~WebPendulumApplication()
         {
+            physicslab::pendulum::bindSession(nullptr);
             physicslab::shutdownWebRuntime();
         }
 
@@ -36,6 +36,7 @@ namespace
             sceneRenderer.updateCamera(frameTime);
             updateSimulation(frameTime);
             draw();
+            physicslab::pendulum::publishFrameState();
         }
 
         float simulationTime() const
@@ -85,27 +86,24 @@ namespace
             simulation.update(timeStep);
         }
 
+        // The control panel lives in the DOM, so the canvas only draws the scene.
         void draw()
         {
             BeginDrawing();
             ClearBackground(physim::colors::CatppuccinMocha);
 
             sceneRenderer.render();
-            overlayRenderer.render();
 
             if (performanceLimited)
             {
                 physicslab::drawPerformanceWarning();
             }
 
-            uiMenus.render();
             EndDrawing();
         }
 
         physim::PendulumSession session;
-        physim::PendulumUiMenus uiMenus;
         physim::PendulumSceneRenderer sceneRenderer;
-        physim::PendulumOverlayRenderer overlayRenderer;
         bool performanceLimited{false};
     };
 

@@ -92,18 +92,31 @@ describe("simulation registry", () => {
     });
 
     it("keeps the web source manifest aligned with every native target", async () => {
+        // The browser build renders the controls, the status overlay and the
+        // analysis plots in the DOM, so every target drops the Dear ImGui menus
+        // and the canvas overlay along with the desktop entry point.
         const targets = [
             {
                 projectDirectory: "project1_balistica",
                 nativeList: "PROJECT1_BALISTICA_SOURCES",
                 webList: "BALLISTICS_NATIVE_SOURCES",
-                excluded: ["src/main.cpp", "src/app/Application.cpp"],
+                excluded: [
+                    "src/main.cpp",
+                    "src/app/Application.cpp",
+                    "src/ui/UiMenus.cpp",
+                    "src/rendering/SimulationOverlayRenderer.cpp",
+                ],
             },
             {
                 projectDirectory: "project2_pendulum",
                 nativeList: "PROJECT2_PENDULUM_SOURCES",
                 webList: "PENDULUM_NATIVE_SOURCES",
-                excluded: ["src/main.cpp", "src/app/PendulumApplication.cpp"],
+                excluded: [
+                    "src/main.cpp",
+                    "src/app/PendulumApplication.cpp",
+                    "src/ui/PendulumUiMenus.cpp",
+                    "src/rendering/PendulumOverlayRenderer.cpp",
+                ],
             },
             {
                 projectDirectory: "project3_gas_brownian",
@@ -112,6 +125,8 @@ describe("simulation registry", () => {
                 excluded: [
                     "src/main.cpp",
                     "src/app/GasBrownianApplication.cpp",
+                    "src/ui/GasUiMenus.cpp",
+                    "src/rendering/GasOverlayRenderer.cpp",
                 ],
             },
         ];

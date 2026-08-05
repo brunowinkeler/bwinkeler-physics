@@ -1,10 +1,10 @@
 #include "common/WebRuntime.h"
 
+#include "GasBridge.h"
+
 #include "physics/GasMode.h"
-#include "rendering/GasOverlayRenderer.h"
 #include "rendering/GasSceneRenderer.h"
 #include "simulation/GasSession.h"
-#include "ui/GasUiMenus.h"
 
 #include <emscripten/emscripten.h>
 
@@ -14,17 +14,17 @@ namespace
     {
     public:
         WebGasBrownianApplication()
-            : uiMenus{session},
-              sceneRenderer{session},
-              overlayRenderer{session}
+            : sceneRenderer{session}
         {
             physicslab::openCanvasWindow("Physics Lab - Gas and Brownian Motion");
-            physicslab::setupWebImGui();
+            physicslab::setupImGuiInputStub();
             sceneRenderer.resetCamera();
+            physicslab::gas::bindSession(&session);
         }
 
         ~WebGasBrownianApplication()
         {
+            physicslab::gas::bindSession(nullptr);
             physicslab::shutdownWebRuntime();
         }
 
@@ -36,6 +36,7 @@ namespace
             sceneRenderer.updateCamera(frameTime);
             updateSimulation(frameTime);
             draw();
+            physicslab::gas::publishFrameState();
         }
 
         float simulationTime() const
@@ -90,27 +91,24 @@ namespace
             simulation.update(timeStep);
         }
 
+        // The control panel lives in the DOM, so the canvas only draws the scene.
         void draw()
         {
             BeginDrawing();
             ClearBackground(physim::colors::CatppuccinMocha);
 
             sceneRenderer.render();
-            overlayRenderer.render();
 
             if (performanceLimited)
             {
                 physicslab::drawPerformanceWarning();
             }
 
-            uiMenus.render();
             EndDrawing();
         }
 
         physim::GasSession session;
-        physim::GasUiMenus uiMenus;
         physim::GasSceneRenderer sceneRenderer;
-        physim::GasOverlayRenderer overlayRenderer;
         bool performanceLimited{false};
     };
 
