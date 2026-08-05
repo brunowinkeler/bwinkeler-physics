@@ -23,7 +23,9 @@ After any browser-adapter, source-selection, compiler, or C++ revision change:
 2. confirm generated `.js` and `.wasm` files remain under 25 MiB each;
 3. open every published simulation route in supported browsers;
 4. exercise start, pause, reset, simple/double mode, camera, controls, and plots;
-5. verify the pointer and Dear ImGui controls remain aligned at multiple viewport sizes;
+5. verify the pointer stays aligned with the scene, that DOM control panels
+   clamp and mirror every edit, and that typing in a control does not trigger a
+   simulation shortcut, at multiple viewport sizes;
 6. enter and exit full screen, including with the `Escape` key;
 7. inspect the browser console for errors and WebGL warnings;
 8. verify the theory route does not request runtime files.

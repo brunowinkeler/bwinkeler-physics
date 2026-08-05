@@ -60,6 +60,7 @@ browser APIs such as canvas, keyboard, mouse, and WebGL.
 sequenceDiagram
     participant User
     participant Page as Astro page
+    participant Panel as DOM control panel
     participant Loader as Runtime loader
     participant Wasm as Pendulum Wasm
     participant WebGL
@@ -68,23 +69,33 @@ sequenceDiagram
     Page-->>User: Static shell and loading state
     Loader->>Loader: Detect WebAssembly and WebGL
     Loader->>Wasm: Fetch and instantiate pendulum.wasm
-    Wasm->>WebGL: Initialize Raylib and Dear ImGui
+    Wasm->>WebGL: Initialize Raylib
+    Loader->>Panel: Attach the control bridge
     loop One browser animation frame
         Wasm->>Wasm: Handle input and integrate fixed steps
-        Wasm->>WebGL: Draw scene, plots, and controls
+        Wasm->>WebGL: Draw the scene
+        Wasm->>Wasm: Publish state and analysis buffers
+        Panel->>Panel: Read the buffers, update readouts and plots
         Wasm-->>Loader: Yield to browser event loop
     end
+    User->>Panel: Edit a parameter
+    Panel->>Wasm: physicsLabSetParameter
 ```
 
 The adapter uses a returning Emscripten main-loop callback. It does not retain
 the native blocking `while` loop and does not use Asyncify.
 
 The web adapter keeps the Raylib drawing buffer equal to the canvas's CSS size.
-This one-to-one coordinate system prevents browser scaling from shrinking the
-Dear ImGui interface or displacing mouse input. The browser-only ImGui setup
-uses an 18-pixel default font and proportionally larger controls. Entering or
-leaving the Fullscreen API changes the canvas layout; the adapter detects the
-new CSS dimensions and resizes Raylib on the following animation frame.
+This one-to-one coordinate system prevents browser scaling from displacing mouse
+input. Entering or leaving the Fullscreen API changes the canvas layout; the
+adapter detects the new CSS dimensions and resizes Raylib on the following
+animation frame.
+
+Every simulation renders its controls, readouts, analysis plots, and launch
+history as HTML beside the canvas, as described in ADR 004. Dear ImGui remains
+linked only because the pinned native camera classes read its IO to gate scene
+input; the browser never starts an ImGui frame and does not build the rlImGui
+backend.
 
 ## Repository boundary
 
@@ -94,7 +105,7 @@ new CSS dimensions and resizes Raylib on the following animation frame.
 - numerical integrators;
 - simulation stepping and retained histories;
 - Raylib rendering;
-- Dear ImGui controls and plots;
+- Dear ImGui controls and plots for the native applications;
 - native entry points, CMake presets, and tests;
 - canonical `PHYSICS_THEORY.md` documents.
 
@@ -102,6 +113,8 @@ new CSS dimensions and resizes Raylib on the following animation frame.
 
 - the Emscripten toolchain and CMake graph;
 - browser entry points and frame-work policy;
+- the `extern "C"` control bridge of every DOM-driven simulation;
+- HTML control panels, readouts, and Canvas 2D analysis plots;
 - feature detection, loading, and failure states;
 - the Astro site and responsive navigation;
 - theory rendering, routes, and table of contents;
